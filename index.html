@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador CSV Meteorológico</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .config {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        input,
+        select {
+            padding: 8px;
+            font-size: 14px;
+        }
+
+        .columnas {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .columna {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        textarea {
+            height: 500px;
+            resize: vertical;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .botones {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+        }
+
+        button:hover {
+            background: #1666c1;
+        }
+
+        .info {
+            text-align: center;
+            margin-top: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Generador CSV</h1>
+
+        <div class="config">
+            <div>
+                <label>Mes</label><br>
+                <select id="mes">
+                    <option value="1">Enero</option>
+                    <option value="2">Febrero</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Mayo</option>
+                    <option value="6">Junio</option>
+                    <option value="7" selected>Julio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Año</label><br>
+                <input type="number" id="anio" value="2026">
+            </div>
+
+            <div>
+                <label>Hora</label><br>
+                <input type="text" id="hora" value="07:00">
+            </div>
+        </div>
+
+        <div class="columnas">
+
+            <div class="columna">
+                <label>Mínima</label>
+                <textarea id="minima" placeholder="23.5
+23.6
+23.1"></textarea>
+            </div>
+
+            <div class="columna">
+                <label>Pluviómetro</label>
+                <textarea id="pluviometro" placeholder="0
+0.7
+0"></textarea>
+            </div>
+
+            <div class="columna">
+                <label>Recorrido</label>
+                <textarea id="recorrido" placeholder="568852
+568957
+569095"></textarea>
+            </div>
+
+        </div>
+
+        <div class="botones">
+            <button onclick="generarCSV()">
+                Descargar CSV
+            </button>
+
+            <div class="info" id="info"></div>
+        </div>
+
+    </div>
+
+    <script>
+
+        function pad(n) {
+            return String(n).padStart(2, '0');
+        }
+
+        function generarCSV() {
+
+            const mes = Number(document.getElementById('mes').value);
+            const anio = Number(document.getElementById('anio').value);
+            const hora = document.getElementById('hora').value;
+
+            const minimas = document.getElementById('minima')
+                .value.trim()
+                .split('\n')
+                .filter(x => x.trim() !== '');
+
+            const pluviometro = document.getElementById('pluviometro')
+                .value.trim()
+                .split('\n')
+                .filter(x => x.trim() !== '');
+
+            const recorrido = document.getElementById('recorrido')
+                .value.trim()
+                .split('\n')
+                .filter(x => x.trim() !== '');
+
+            const total = Math.max(
+                minimas.length,
+                pluviometro.length,
+                recorrido.length
+            );
+
+            if (
+                minimas.length !== total ||
+                pluviometro.length !== total ||
+                recorrido.length !== total
+            ) {
+                alert('Las tres columnas deben tener la misma cantidad de líneas.');
+                return;
+            }
+
+            let csv = "timestamp;minima;pluviometro;recorrido\n";
+
+            for (let i = 0; i < total; i++) {
+
+                const fecha =
+                    pad(i + 1) + '/' +
+                    pad(mes) + '/' +
+                    anio + ' ' +
+                    hora;
+
+                csv +=
+                    fecha + ';' +
+                    minimas[i] + ';' +
+                    pluviometro[i] + ';' +
+                    recorrido[i] + '\n';
+            }
+
+            const blob = new Blob(
+                [csv],
+                { type: 'text/csv;charset=utf-8;' }
+            );
+
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+
+            a.href = url;
+            a.download = `datos_${anio}_${pad(mes)}.csv`;
+
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            URL.revokeObjectURL(url);
+
+            document.getElementById('info').innerHTML =
+                `${total} registros exportados`;
+        }
+
+    </script>
+
+</body>
+
+</html>

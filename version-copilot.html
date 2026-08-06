@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Generador CSV Meteorológico</title>
+    <style>
+        body {
+            font-family: Arial,
+                sans-serif;
+
+            background: #f4f6f9;
+
+            padding: 20px
+        }
+
+        .wrap {
+            max-width: 1200px;
+
+            margin: auto
+        }
+
+        select,
+        input,
+        button {
+            padding: 8px
+        }
+
+        #campos {
+            display: flex;
+
+            gap: 16px;
+
+            flex-wrap: wrap;
+
+            margin-top: 20px
+        }
+
+        .campo {
+            flex: 1;
+
+            min-width: 220px
+        }
+
+        .campo textarea {
+            width: 100%;
+
+            height: 420px;
+
+            font-family: monospace
+        }
+
+        .info {
+            font-size: 12px;
+
+            color: #666
+        }
+
+        button {
+            margin-top: 20px;
+
+            background: #1976d2;
+
+            color: #fff;
+
+            border: none;
+
+            border-radius: 4px;
+
+            cursor: pointer
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h2>Generador CSV</h2>
+
+        <label>Tipo:</label>
+        <select id="tipo"></select>
+
+        <label>Mes:</label>
+        <input id="mes" type="number" min="1" max="12" value="7">
+
+        <label>Año:</label>
+        <input id="anio" type="number" value="2026">
+
+        <label>Horario Observaciones</label>
+
+        <select id="horarioObservacion">
+            <option value="18">07 - 13 - 18</option>
+            <option value="19">07 - 13 - 19</option>
+        </select>
+
+
+        <div id="campos"></div>
+
+        <button onclick="descargarCSV()">Descargar CSV</button>
+    </div>
+    <script>
+
+        const horaNoche = document.getElementById("horarioObservacion").value;
+
+        const horasObservacion = [
+            "07:00",
+            "13:00",
+            horaNoche + ":00"
+        ];
+
+
+        const formatos = {
+            minima: {
+                nombre: 'Minima/Pluviometro/Recorrido',
+                headers: ['timestamp',
+                    'minima',
+                    'pluviometro',
+                    'recorrido'],
+                horas: ['07:00'],
+                columnas: ['minima',
+                    'pluviometro',
+                    'recorrido']
+            },
+            maxima: {
+                nombre: 'TMX',
+                headers: ['timestamp',
+                    'tmx'],
+                horas: ['19:00'],
+                columnas: ['tmx']
+            },
+            psico: {
+                nombre: 'Psicrometria',
+                headers: ['timestamp',
+                    'secos',
+                    'humedos',
+                    'termografo',
+                    'higrografo'],
+                horas: ['07:00',
+                    '13:00',
+                    '18:00'],
+                columnas: ['secos',
+                    'humedos',
+                    'termografo',
+                    'higrografo'],
+                usaHorarioObservacion: true
+            },
+            nub: {
+                nombre: 'Nubosidad',
+                headers: ['timestamp',
+                    'nubosidad',
+                    'fenomenos'],
+                horas: ['07:00',
+                    '13:00',
+                    '19:00'],
+                columnas: ['nubosidad',
+                    'fenomenos']
+            },
+            pg: {
+                nombre: 'PG Horaria',
+                headers: ['timestamp',
+                    'pg'],
+                especial: 'pg',
+                columnas: ['pg']
+            },
+            brillo: {
+                nombre: 'Brillo Solar',
+                headers: ['Dia',
+                    'brillo'],
+                especial: 'brillo',
+                columnas: ['brillo']
+            }
+        };
+
+
+        const tipo = document.getElementById('tipo');
+
+
+        Object.entries(formatos).forEach(([k, v]) => {
+            let o = document.createElement('option');
+            o.value = k;
+            o.textContent = v.nombre;
+            tipo.appendChild(o)
+        });
+
+        function diasMes(a, m) {
+            return new Date(a, m, 0).getDate()
+        }
+
+        function render() {
+            const f = formatos[tipo.value];
+            const c = document.getElementById('campos');
+            c.innerHTML = '';
+            f.columnas.forEach(col => {
+                const d = document.createElement('div');
+                d.className = 'campo';
+                d.innerHTML = '<h4>' + col + '</h4><textarea id = "' + col + '" ></textarea ><div class="info" id="i_' + col + '"></div>';
+                c.appendChild(d);
+                d.querySelector('textarea').addEventListener('input', () => contar(col));
+
+            });
+        }
+
+        function contar(col) {
+            const t = document.getElementById(col).value.trim();
+            console.log({ t })
+            const n = t ? t.split(/\n+/).length : 0;
+
+            document.getElementById('i_' + col).textContent = n + ' registros';
+
+        }
+
+        tipo.onchange = render;
+
+        function pad(n) {
+            return String(n).padStart(2, '0')
+        }
+
+        function simple(f) {
+            const mes = +mesEl.value,
+                anio = +anioEl.value,
+                dias = diasMes(anio, mes);
+
+            let csv = f.headers.join(';') + '\n';
+
+            const datos = {};
+
+            f.columnas.forEach(c => datos[c] = (document.getElementById(c).value.trim() ? document.getElementById(c).value.trim().split(/\n+/) : []));
+            for (let d = 1; d <= dias; d++) {
+                if (f.usaHorarioObservacion) {
+
+                    f.horas = [
+                        "07:00",
+                        "13:00",
+                        document.getElementById("horarioObservacion").value + ":00"
+                    ];
+
+                }
+
+                for (let h = 0; h < f.horas.length; h++) {
+                    let fila = [pad(d) + '/' + pad(mes) + '/' + anio + ' ' + f.horas[h]];
+                    f.columnas.forEach(c => fila.push(datos[c][(d - 1) * f.horas.length + h] || ''));
+                    csv += fila.join(';') + '\n';
+                }
+            } return csv;
+        }
+
+        function genPG() {
+            const mes = +mesEl.value, anio = +anioEl.value;
+            const vals = (document.getElementById('pg').value.trim() ? document.getElementById('pg').value.trim().split(/\n+/) : []);
+            let csv = 'timestamp;pg\n', i = 0;
+            let ini = new Date(anio, mes - 1, 1, 7, 0), fin = new Date(anio, mes, 1, 6, 0);
+            for (let d = new Date(ini); d <= fin; d.setHours(d.getHours() + 1)) {
+                csv += pad(d.getDate()) + ' / ' + pad(d.getMonth() + 1) + ' / ' + d.getFullYear() + ' ' + pad(d.getHours()) + ':00;' + (vals[i++] || '') + '\n'
+            }
+            return csv;
+        }
+
+        function genBrillo() {
+            const mes = +mesEl.value, anio = +anioEl.value, dias = diasMes(anio, mes);
+            const vals = (document.getElementById('brillo').value.trim() ? document.getElementById('brillo').value.trim().split(/\n+/) : []);
+            let csv = 'Dia;brillo\n', p = 0;
+            for (let d = 1;
+                d <= dias;
+                d++) {
+                for (let h = 5;
+                    h <= 18;
+                    h++) {
+                    csv += pad(d) + ' / ' + pad(mes) + ' / ' + anio + ' ' + pad(h) + ':00;' + (vals[p++] || '') + '\n';
+                }
+            } return csv;
+        }
+
+        const mesEl = document.getElementById('mes'), anioEl = document.getElementById('anio');
+
+
+        function descargarCSV() {
+            const f = formatos[tipo.value];
+
+            let csv = f.especial === 'pg' ? genPG() : f.especial === 'brillo' ? genBrillo() : simple(f);
+
+            const blob = new Blob([csv], {
+                type: 'text / csv;charset = utf - 8'
+            });
+
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = tipo.value + '_' + anioEl.value + '_' + pad(mesEl.value) + '.csv';
+            a.click();
+        }
+
+        tipo.value = 'minima';
+
+        render();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generador CSV</title>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f6f9;
+    padding:20px;
+}
+
+.container{
+    max-width:1000px;
+    margin:auto;
+}
+
+h1{
+    text-align:center;
+}
+
+.config{
+    display:flex;
+    gap:15px;
+    margin-bottom:20px;
+}
+
+input,select{
+    padding:8px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+}
+
+th{
+    background:#1a73e8;
+    color:white;
+}
+
+th,td{
+    border:1px solid #ddd;
+    padding:8px;
+    text-align:center;
+}
+
+td:first-child{
+    background:#f5f5f5;
+    font-weight:bold;
+}
+
+input.celda{
+    width:100%;
+    border:none;
+    text-align:center;
+    padding:5px;
+}
+
+input.celda:focus{
+    outline:2px solid #1a73e8;
+}
+
+.botones{
+    margin-top:20px;
+    text-align:center;
+}
+
+button{
+    padding:12px 25px;
+    font-size:16px;
+    background:#1a73e8;
+    color:white;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#155cc2;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>Generador CSV Meteorológico</h1>
+
+<div class="config">
+
+    <div>
+        <label>Mes</label><br>
+        <select id="mes">
+            <option value="1">Enero</option>
+            <option value="2">Febrero</option>
+            <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7" selected>Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
+        </select>
+    </div>
+
+    <div>
+        <label>Año</label><br>
+        <input type="number" id="anio" value="2026">
+    </div>
+
+    <div>
+        <label>Hora</label><br>
+        <input type="text" id="hora" value="07:00">
+    </div>
+
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Día</th>
+            <th>Mínima</th>
+            <th>Pluviómetro</th>
+            <th>Recorrido</th>
+        </tr>
+    </thead>
+
+    <tbody id="tablaBody"></tbody>
+</table>
+
+<div class="botones">
+    <button onclick="descargarCSV()">
+        Descargar CSV
+    </button>
+</div>
+
+</div>
+
+<script>
+
+const tablaBody = document.getElementById('tablaBody');
+
+for(let dia=1; dia<=31; dia++){
+
+    const tr=document.createElement('tr');
+
+    tr.innerHTML=`
+        <td>${String(dia).padStart(2,"0")}</td>
+
+        <td>
+            <input class="celda minima">
+        </td>
+
+        <td>
+            <input class="celda pluviometro">
+        </td>
+
+        <td>
+            <input class="celda recorrido">
+        </td>
+    `;
+
+    tablaBody.appendChild(tr);
+}
+
+function descargarCSV(){
+
+    const mes = document.getElementById('mes').value.padStart(2,'0');
+    const anio = document.getElementById('anio').value;
+    const hora = document.getElementById('hora').value;
+
+    const filas = document.querySelectorAll("#tablaBody tr");
+
+    let csv = "timestamp;minima;pluviometro;recorrido\n";
+
+    filas.forEach((fila,index)=>{
+
+        const minima =
+            fila.querySelector(".minima").value.trim();
+
+        const pluviometro =
+            fila.querySelector(".pluviometro").value.trim();
+
+        const recorrido =
+            fila.querySelector(".recorrido").value.trim();
+
+        if(
+            minima ||
+            pluviometro ||
+            recorrido
+        ){
+
+            const dia =
+                String(index+1).padStart(2,'0');
+
+            csv +=
+                `${dia}/${mes}/${anio} ${hora};`+
+                `${minima};`+
+                `${pluviometro};`+
+                `${recorrido}\n`;
+        }
+    });
+
+    const blob = new Blob(
+        [csv],
+        {
+            type:'text/csv;charset=utf-8;'
+        }
+    );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const a =
+        document.createElement('a');
+
+    a.href = url;
+    a.download = `datos_${anio}_${mes}.csv`;
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+}
+
+document.addEventListener("keydown", function(e){
+
+    if(e.key !== "Enter") return;
+
+    const actual = document.activeElement;
+
+    if(!actual.classList.contains("celda")){
+        return;
+    }
+
+    e.preventDefault();
+
+const campos = [
+    ...document.querySelectorAll(".minima"),
+    ...document.querySelectorAll(".pluviometro"),
+    ...document.querySelectorAll(".recorrido")
+];
+
+    const indice = campos.indexOf(actual);
+
+    if(indice < campos.length - 1){
+        campos[indice + 1].focus();
+        campos[indice + 1].select();
+    }
+
+});
+
+</script>
+
+</body>
+</html>

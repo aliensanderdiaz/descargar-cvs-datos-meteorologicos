@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <select id="tipo">
+        <option value="minima">Mínima</option>
+        <option value="maxima">Máxima</option>
+        <option value="psicrometria">Psicrometría</option>
+        <option value="nubosidad">Nubosidad</option>
+        <option value="pg">Pluviómetro horario</option>
+        <option value="brillo">Brillo solar</option>
+    </select>
+
+    <input id="mes" type="number" min="1" max="12" value="7">
+
+    <input id="anio" type="number" value="2026">
+
+    <div id="captura"></div>
+
+    <button onclick="descargarCSV()">
+        Descargar CSV
+    </button>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

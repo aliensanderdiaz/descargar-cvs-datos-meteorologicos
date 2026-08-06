@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Generador CSV Meteorológico</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 20px
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px
+        }
+
+        select,
+        input,
+        button {
+            padding: 8px
+        }
+
+        button {
+            background: #1976d2;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer
+        }
+
+        .table-wrap {
+            overflow: auto;
+            background: #fff
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 4px
+        }
+
+        th {
+            background: #1976d2;
+            color: #fff;
+            position: sticky;
+            top: 0
+        }
+
+        input.cell {
+            width: 100%;
+            box-sizing: border-box;
+            border: none;
+            padding: 6px
+        }
+
+        tr:nth-child(even) {
+            background: #fafafa
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Generador CSV Meteorológico</h2>
+        <div class="controls">
+            <select id="tipo"></select>
+            <input type="number" id="mes" min="1" max="12" value="7">
+            <input type="number" id="anio" value="2026">
+            <select id="horaObs">
+                <option value="18">Observación 18:00</option>
+                <option value="19">Observación 19:00</option>
+            </select>
+            <button onclick="crearTabla()">Generar Tabla</button>
+            <button onclick="descargarCSV()">Descargar CSV</button>
+        </div>
+        <div class="table-wrap">
+            <table id="tabla"></table>
+        </div>
+    </div>
+    <script>
+        const formatos = {
+
+            minima: {
+                cols: ['minima', 'pluviometro', 'recorrido']
+            },
+            maxima: {
+                cols: ['tmx']
+            },
+            psico: {
+                cols: ['secos', 'humedos', 'termografo', 'higrografo']
+            },
+            nub: {
+                cols: ['nubosidad', 'fenomenos']
+            },
+            pg: {
+                cols: ['pg']
+            },
+            brillo: {
+                cols: ['brillo']
+            }
+
+        };
+        const sel = document.getElementById('tipo');
+        Object.keys(formatos).forEach(k => {
+            let o = document.createElement('option');
+            o.value = k;
+            o.textContent = k;
+            sel.appendChild(o)
+        });
+        function pad(n) {
+            return String(n).padStart(2, '0');
+        }
+        function diasMes(a, m) {
+            return new Date(a, m, 0).getDate();
+        }
+        function filasFormato() {
+
+            const t = sel.value, m = +mes.value, a = +anio.value, d = diasMes(a, m);
+            let filas = [];
+            if (t === 'minima' || t === 'maxima') for (let i = 1;
+                i <= d;
+                i++) filas.push({
+                    label: pad(i)
+                });
+            else if (t === 'psico' || t === 'nub') {
+
+                const h3 = document.getElementById('horaObs').value + ':00';
+                ['07:00', '13:00', h3].forEach;
+                for (let i = 1;
+                    i <= d;
+                    i++) ['07:00', '13:00', h3].forEach(h => filas.push({
+                        label: pad(i) + ' ' + h
+                    }));
+
+            }
+            else if (t === 'pg') {
+
+                let ini = new Date(a, m - 1, 1, 7), fin = new Date(a, m, 1, 6);
+                for (let x = new Date(ini);
+                    x <= fin;
+                    x.setHours(x.getHours() + 1)) filas.push({
+                        label: pad(x.getDate()) + ' ' + pad(x.getHours())
+                    });
+
+            }
+            else if (t === 'brillo') {
+
+                for (let i = 1;
+                    i <= d;
+                    i++) for (let h = 5;
+                        h <= 18;
+                        h++) filas.push({
+                            label: pad(i) + ' ' + pad(h)
+                        });
+
+            }
+            return filas;
+
+        }
+        function crearTabla() {
+
+            const t = sel.value, cfg = formatos[t], table = document.getElementById('tabla');
+            const filas = filasFormato();
+            let h = '<tr><th>Registro</th>';
+            cfg.cols.forEach(c => h += '<th>' + c + '</th>');
+            h += '</tr>';
+            filas.forEach((f, r) => {
+                h += '<tr><td>' + f.label + '</td>';
+                cfg.cols.forEach((c, col) => {
+                    h += `<td><input class="cell" data-row="${r
+                        }" data-col="${col
+                        }"></td>`
+                });
+                h += '</tr>';
+            });
+            table.innerHTML = h;
+            attachNav();
+            attachPaste();
+
+        }
+        function attachNav() {
+
+            document.querySelectorAll('.cell').forEach(inp => {
+
+                inp.addEventListener('keydown', e => {
+
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    let r = +inp.dataset.row, c = +inp.dataset.col;
+                    let n = document.querySelector(`.cell[data-row='${r + 1
+                        }'][data-col='${c
+                        }']`);
+                    if (!n) n = document.querySelector(`.cell[data-row='0'][data-col='${c + 1
+                        }']`);
+                    if (n) {
+                        n.focus();
+                        n.select();
+                    }
+
+                });
+
+            });
+
+        }
+        function attachPaste() {
+
+            document.querySelectorAll('.cell').forEach(inp => {
+
+                inp.addEventListener('paste', e => {
+
+                    const txt = (e.clipboardData || window.clipboardData).getData('text');
+                    const vals = txt.split(/\r?\n/).filter(v => v.trim() !== '');
+                    if (vals.length <= 1) return;
+                    e.preventDefault();
+                    let r = +inp.dataset.row, c = +inp.dataset.col;
+                    vals.forEach((v, i) => {
+
+                        const cel = document.querySelector(`.cell[data-row='${r + i
+                            }'][data-col='${c
+                            }']`);
+                        if (cel) cel.value = v;
+
+                    });
+
+                });
+
+            });
+
+        }
+        function descargarCSV() {
+
+            const t = sel.value, m = +mes.value, a = +anio.value, d = diasMes(a, m);
+            let csv = '';
+            if (t === 'minima') csv = 'timestamp;minima;pluviometro;recorrido\n';
+            if (t === 'maxima') csv = 'timestamp;tmx\n';
+            if (t === 'psico') csv = 'timestamp;secos;humedos;termografo;higrografo\n';
+            if (t === 'nub') csv = 'timestamp;nubosidad;fenomenos\n';
+            if (t === 'pg') csv = 'timestamp;pg\n';
+            if (t === 'brillo') csv = 'Dia;brillo\n';
+            const rows = [...document.querySelectorAll('#tabla tr')].slice(1);
+            rows.forEach(tr => {
+
+                const vals = [...tr.querySelectorAll('input')].map(x => x.value);
+                let ts = '';
+                const label = tr.cells[0].innerText;
+                if (t === 'minima') ts = label + '/' + pad(m) + '/' + a + ' 07:00';
+                else if (t === 'maxima') ts = label + '/' + pad(m) + '/' + a + ' 19:00';
+                else if (t === 'psico' || t === 'nub') {
+                    let p = label.split(' ');
+                    ts = p[0] + '/' + pad(m) + '/' + a + ' ' + p[1];
+                }
+                else if (t === 'pg') {
+                    let p = label.split(' ');
+                    let day = p[0], hh = p[1];
+                    let nm = m, ny = a;
+                    if (day === '01' && hh < '07') {
+                        nm = m === 12 ? 1 : m + 1;
+                        if (m === 12) ny++;
+                    } ts = day + '/' + pad(nm) + '/' + ny + ' ' + hh + ':00';
+                }
+                else if (t === 'brillo') {
+                    let p = label.split(' ');
+                    ts = p[0] + '/' + pad(m) + '/' + a + ' ' + p[1] + ':00';
+                }
+                csv += ts + ';' + vals.join(';') + '\n';
+
+            });
+            const blob = new Blob([csv], {
+                type: 'text/csv;charset=utf-8'
+            });
+            const aTag = document.createElement('a');
+            aTag.href = URL.createObjectURL(blob);
+            aTag.download = t + '_' + a + '_' + pad(m) + '.csv';
+            aTag.click();
+
+        }
+        crearTabla();
+    </script>
+</body>
+
+</html>
