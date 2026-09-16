@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Captura Meteorológica V1</title>
+    <style>
+      body {
+        font-family:
+          Segoe UI,
+          Arial,
+          sans-serif;
+        background: #f4f6f9;
+        margin: 20px;
+      }
+      h1 {
+        margin-bottom: 10px;
+      }
+      .panel {
+        background: #fff;
+        padding: 12px;
+        border: 1px solid #ccc;
+        margin-bottom: 12px;
+      }
+      button {
+        padding: 8px 12px;
+        background: #1976d2;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      select,
+      input {
+        padding: 6px;
+      }
+      .modulo {
+        display: none;
+      }
+      .activo {
+        display: block;
+      }
+      .wrap {
+        overflow: auto;
+      }
+      .tabla {
+        border-collapse: collapse;
+        background: #fff;
+      }
+      .tabla th,
+      .tabla td {
+        border: 1px solid #ccc;
+        padding: 3px;
+        text-align: center;
+      }
+      .tabla th {
+        background: #1976d2;
+        color: #fff;
+        position: sticky;
+        top: 0;
+      }
+      .tabla input {
+        width: 70px;
+        border: none;
+        text-align: center;
+      }
+      .fila-activa td {
+        background: #fff8c4 !important;
+      }
+      .columna-activa {
+        background: #fff8c4 !important;
+      }
+      .celda-activa {
+        background: #ffd54f !important;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Captura Meteorológica V1</h1>
+    <div class="panel">
+      Mes <input id="mes" type="number" value="8" min="1" max="12" /> Año
+      <input id="anio" type="number" value="2026" />
+      Módulo
+      <select id="modulo" onchange="mostrarModulo()">
+        <option value="diario">Datos Diarios</option>
+        <option value="temp">Temperatura y Humedad</option>
+        <option value="nub">Nubosidad y Fenómenos</option>
+      </select>
+    </div>
+
+    <div id="diario" class="modulo activo panel">
+      <button onclick="exportarDiario()">Exportar CSV Datos Diarios</button>
+      <div class="wrap"><table id="tablaDiario" class="tabla"></table></div>
+    </div>
+
+    <div id="temp" class="modulo panel">
+      Tercera observación
+      <select id="hora3">
+        <option>18:00</option>
+        <option selected>19:00</option>
+      </select>
+      <button onclick="exportarTemp()">Exportar CSV Temp/Humedad</button>
+      <div class="wrap"><table id="tablaTemp" class="tabla"></table></div>
+    </div>
+
+    <div id="nub" class="modulo panel">
+      <button onclick="exportarNub()">Exportar CSV Nubosidad/Fenómenos</button>
+      <div class="wrap"><table id="tablaNub" class="tabla"></table></div>
+    </div>
+    <script>
+      const pad = (n) => String(n).padStart(2, "0");
+      function diasMes(a, m) {
+        return new Date(a, m, 0).getDate();
+      }
+      function mostrarModulo() {
+        document
+          .querySelectorAll(".modulo")
+          .forEach((x) => x.classList.remove("activo"));
+        document.getElementById(modulo.value).classList.add("activo");
+      }
+      function crearTablas() {
+        crearDiario();
+        crearTemp();
+        crearNub();
+      }
+      function crearDiario() {
+        let dias = diasMes(+anio.value, +mes.value);
+        let h =
+          "<tr><th>Día</th><th>Tmin</th><th>Tmax</th><th>Pluv</th><th>Recorrido</th></tr>";
+        for (let d = 1; d <= dias; d++)
+          h += `<tr><td>${pad(d)}</td><td><input></td><td><input></td><td><input></td><td><input></td></tr>`;
+        tablaDiario.innerHTML = h;
+        configurarNav(tablaDiario);
+      }
+      function crearTemp() {
+        let dias = diasMes(+anio.value, +mes.value);
+        let h =
+          "<tr><th>Día</th><th>Sec07</th><th>Hum07</th><th>Term07</th><th>Hig07</th><th>Sec13</th><th>Hum13</th><th>Term13</th><th>Hig13</th><th>Sec3</th><th>Hum3</th><th>Term3</th><th>Hig3</th></tr>";
+        for (let d = 1; d <= dias; d++) {
+          h += "<tr><td>" + pad(d) + "</td>";
+          for (let i = 0; i < 12; i++) h += "<td><input></td>";
+          h += "</tr>";
+        }
+        tablaTemp.innerHTML = h;
+        configurarNav(tablaTemp);
+      }
+      function crearNub() {
+        let dias = diasMes(+anio.value, +mes.value);
+        let h =
+          "<tr><th>Día</th><th>Nub07</th><th>Fen07</th><th>Nub13</th><th>Fen13</th><th>Nub19</th><th>Fen19</th></tr>";
+        for (let d = 1; d <= dias; d++) {
+          h += "<tr><td>" + pad(d) + "</td>";
+          for (let i = 0; i < 6; i++) h += "<td><input></td>";
+          h += "</tr>";
+        }
+        tablaNub.innerHTML = h;
+        configurarNav(tablaNub);
+      }
+      function configurarNav(tabla) {
+        const inputs = [...tabla.querySelectorAll("input")];
+        inputs.forEach((inp, idx) => {
+          inp.addEventListener("focus", () => {
+            tabla
+              .querySelectorAll(".fila-activa")
+              .forEach((x) => x.classList.remove("fila-activa"));
+            tabla
+              .querySelectorAll(".celda-activa")
+              .forEach((x) => x.classList.remove("celda-activa"));
+            inp.closest("tr").classList.add("fila-activa");
+            inp.classList.add("celda-activa");
+          });
+          inp.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (inputs[idx + 1]) inputs[idx + 1].focus();
+            }
+          });
+        });
+      }
+      function descargar(txt, n) {
+        const b = new Blob([txt], { type: "text/csv" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(b);
+        a.download = n;
+        a.click();
+      }
+      function exportarDiario() {
+        let csv = "timestamp;variable;valor\n";
+        [...tablaDiario.rows].slice(1).forEach((r) => {
+          let d = r.cells[0].innerText;
+          let v = r.querySelectorAll("input");
+          csv += `${d}/${pad(mes.value)}/${anio.value} 07:00;tmin;${v[0].value}\n`;
+          csv += `${d}/${pad(mes.value)}/${anio.value} 19:00;tmax;${v[1].value}\n`;
+          csv += `${d}/${pad(mes.value)}/${anio.value} 07:00;pluv;${v[2].value}\n`;
+          csv += `${d}/${pad(mes.value)}/${anio.value} 07:00;recorrido;${v[3].value}\n`;
+        });
+        descargar(csv, "datos_diarios.csv");
+      }
+      function exportarTemp() {
+        let h3 = hora3.value;
+        let csv = "timestamp;variable;valor\n";
+        [...tablaTemp.rows].slice(1).forEach((r) => {
+          let d = r.cells[0].innerText;
+          let v = [...r.querySelectorAll("input")].map((x) => x.value);
+          const hrs = [
+            "07:00",
+            "07:00",
+            "07:00",
+            "07:00",
+            "13:00",
+            "13:00",
+            "13:00",
+            "13:00",
+            h3,
+            h3,
+            h3,
+            h3,
+          ];
+          const vars = [
+            "sec",
+            "hum",
+            "term",
+            "hig",
+            "sec",
+            "hum",
+            "term",
+            "hig",
+            "sec",
+            "hum",
+            "term",
+            "hig",
+          ];
+          v.forEach(
+            (x, i) =>
+              (csv += `${d}/${pad(mes.value)}/${anio.value} ${hrs[i]};${vars[i]};${x}`),
+          );
+        });
+        descargar(csv, "temp_humedad.csv");
+      }
+      function exportarNub() {
+        let csv = "timestamp;variable;valor\n";
+        [...tablaNub.rows].slice(1).forEach((r) => {
+          let d = r.cells[0].innerText;
+          let v = [...r.querySelectorAll("input")].map((x) => x.value);
+          const hrs = ["07:00", "07:00", "13:00", "13:00", "19:00", "19:00"];
+          const vars = ["nub", "fen", "nub", "fen", "nub", "fen"];
+          v.forEach(
+            (x, i) =>
+              (csv += `${d}/${pad(mes.value)}/${anio.value} ${hrs[i]};${vars[i]};${x}\n`),
+          );
+        });
+        descargar(csv, "nubosidad_fenomenos.csv");
+      }
+      crearTablas();
+    </script>
+  </body>
+</html>

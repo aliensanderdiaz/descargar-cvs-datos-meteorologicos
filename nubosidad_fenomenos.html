@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Captura Meteorológica V3</title>
+    <style>
+      body {
+        font-family:
+          Segoe UI,
+          Arial;
+        background: #f4f6f9;
+        margin: 20px;
+      }
+      table {
+        border-collapse: collapse;
+        background: #fff;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 4px;
+      }
+      th {
+        background: #1976d2;
+        color: #fff;
+        position: sticky;
+        top: 0;
+      }
+      input {
+        width: 90px;
+        border: none;
+        text-align: center;
+        padding: 4px;
+      }
+      .panel {
+        margin: 15px 0;
+      }
+      .fila td {
+        background: #fff8c4 !important;
+      }
+      .col {
+        background: #fff8c4 !important;
+      }
+      .act {
+        background: #ffd54f !important;
+      }
+      button,
+      input[type="number"],
+      select {
+        padding: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Captura Meteorológica V3</h2>
+    <div>
+      Mes <input id="m" type="number" value="7" min="1" max="12" /> Año
+      <input id="a" type="number" value="2026" /> 
+      <button onclick="crear()">Generar</button>
+    </div>
+
+    <div class="panel">
+      <h3>Nubosidad y Fenómenos</h3>
+      <table id="t3"></table>
+      <button onclick="csvNF()">CSV Nub/Fen</button>
+    </div>
+    <script>
+      const p = (n) => String(n).padStart(2, "0");
+      const dm = (a, m) => new Date(a, m, 0).getDate();
+      function crear() {
+        let d = dm(+a.value, +m.value);
+
+        let n =
+          "<tr><th>Timestamp</th><th>Nubosidad</th><th>Fenómenos</th></tr>";
+        rr = 0;
+        for (let dia = 1; dia <= d; dia++)
+          for (let hr of ["07:00", "13:00", "19:00"]) {
+            n +=
+              "<tr><td>" +
+              p(dia) +
+              "/" +
+              p(m.value) +
+              "/" +
+              a.value +
+              " " +
+              hr +
+              "</td>";
+            for (let c = 0; c < 2; c++)
+              n += `<td><input data-g='nf' data-row='${rr}' data-col='${c}'></td>`;
+            n += "</tr>";
+            rr++;
+          }
+        t3.innerHTML = n;
+        nav();
+      }
+      function nav() {
+        document.querySelectorAll("input[data-g]").forEach((inp) => {
+          inp.onfocus = () => {
+            document
+              .querySelectorAll(".fila")
+              .forEach((x) => x.classList.remove("fila"));
+            document
+              .querySelectorAll(".act")
+              .forEach((x) => x.classList.remove("act"));
+            inp.classList.add("act");
+            inp.closest("tr").classList.add("fila");
+          };
+          inp.onkeydown = (e) => {
+            let r = +inp.dataset.row,
+              c = +inp.dataset.col,
+              g = inp.dataset.g;
+            if (e.key === "Enter") {
+              e.preventDefault();
+              let s = document.querySelector(
+                `input[data-g="${g}"][data-row="${r + 1}"][data-col="${c}"]`,
+              );
+              if (!s)
+                s = document.querySelector(
+                  `input[data-g="${g}"][data-row="0"][data-col="${c + 1}"]`,
+                );
+              if (s) s.focus();
+            }
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              let s = document.querySelector(
+                `input[data-g="${g}"][data-row="${r + 1}"][data-col="${c}"]`,
+              );
+              if (s) s.focus();
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              let s = document.querySelector(
+                `input[data-g="${g}"][data-row="${r - 1}"][data-col="${c}"]`,
+              );
+              if (s) s.focus();
+            }
+          };
+        });
+      }
+      function dl(t, n) {
+        let b = new Blob([t], { type: "text/csv" }),
+          a1 = document.createElement("a");
+        a1.href = URL.createObjectURL(b);
+        a1.download = n;
+        a1.click();
+      }
+      function csv07() {
+        let c = "timestamp,tmin,precipitacion,recorrido\n";
+        [...t1.rows].slice(1).forEach((r) => {
+          let v = r.querySelectorAll("input");
+          c += `${r.cells[0].innerText}/${p(m.value)}/${a.value} 07:00,${v[0].value},${v[2].value},${v[3].value}\n`;
+        });
+        dl(c, "observacion_07.csv");
+      }
+      function csv19() {
+        let c = "timestamp,tmax\n";
+        [...t1.rows].slice(1).forEach((r) => {
+          let v = r.querySelectorAll("input");
+          c += `${r.cells[0].innerText}/${p(m.value)}/${a.value} 19:00,${v[1].value}\n`;
+        });
+        dl(c, "observacion_19.csv");
+      }
+      function csvTH() {
+        let c = "timestamp,secos,humedos,termografo,higrografo\n";
+        [...t2.rows].slice(1).forEach((r) => {
+          let v = r.querySelectorAll("input");
+          c += `${r.cells[0].innerText},${v[0].value},${v[1].value},${v[2].value},${v[3].value}\n`;
+        });
+        dl(c, "temp_humedad.csv");
+      }
+      function csvNF() {
+        let c = "timestamp,nubosidad,fenomenos\n";
+        [...t3.rows].slice(1).forEach((r) => {
+          let v = r.querySelectorAll("input");
+          c += `${r.cells[0].innerText},${v[0].value},${v[1].value}\n`;
+        });
+        dl(c, "nubosidad_fenomenos.csv");
+      }
+      crear();
+    </script>
+  </body>
+</html>

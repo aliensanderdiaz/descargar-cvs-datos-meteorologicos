@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Captura Meteorológica V2</title>
+    <style>
+      body {
+        font-family: Arial;
+        margin: 20px;
+        background: #f4f6f9;
+      }
+      table {
+        border-collapse: collapse;
+        background: #fff;
+      }
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 4px;
+      }
+      th {
+        background: #1976d2;
+        color: #fff;
+      }
+      input {
+        width: 90px;
+        border: none;
+        text-align: center;
+      }
+      button,
+      select,
+      input[type="number"] {
+        padding: 6px;
+      }
+      .sec {
+        margin-top: 15px;
+      }
+      .activo {
+        background: #ffd54f !important;
+      }
+      .fila td {
+        background: #fff8c4 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Captura Meteorológica V2</h2>
+    <div>
+      Mes <input id="mes" type="number" value="7" min="1" max="12" /> Año
+      <input id="anio" type="number" value="2026" /> Hora 3
+      <select id="hora3">
+        <option>18:00</option>
+        <option>19:00</option></select
+      ><button onclick="crear()">Generar</button>
+    </div>
+    <div class="sec">
+      <h3>Observación diaria</h3>
+      <table id="diario"></table>
+      <button onclick="exp07()">CSV 07:00</button>
+      <button onclick="exp19()">CSV 19:00</button>
+    </div>
+    <div class="sec">
+      <h3>Temperatura y Humedad</h3>
+      <table id="th"></table>
+      <button onclick="expTH()">CSV Temp/Humedad</button>
+    </div>
+    <div class="sec">
+      <h3>Nubosidad y Fenómenos</h3>
+      <table id="nf"></table>
+      <button onclick="expNF()">CSV Nub/Fen</button>
+    </div>
+    <script>
+      const pad = (n) => String(n).padStart(2, "0");
+      const dm = (a, m) => new Date(a, m, 0).getDate();
+      function crear() {
+        let d = dm(+anio.value, +mes.value);
+        let h =
+          "<tr><th>Día</th><th>Tmin</th><th>Tmax</th><th>Prec</th><th>Rec</th></tr>";
+        for (let i = 1; i <= d; i++)
+          h += `<tr><td>${pad(i)}</td><td><input></td><td><input></td><td><input></td><td><input></td></tr>`;
+        diario.innerHTML = h;
+        let horas = ["07:00", "13:00", hora3.value];
+        let t =
+          "<tr><th>Timestamp</th><th>Secos</th><th>Humedos</th><th>Termografo</th><th>Higrografo</th></tr>";
+        for (let i = 1; i <= d; i++)
+          for (let hr of horas)
+            t += `<tr><td>${pad(i)}/${pad(mes.value)}/${anio.value} ${hr}</td><td><input></td><td><input></td><td><input></td><td><input></td></tr>`;
+        th.innerHTML = t;
+        let n =
+          "<tr><th>Timestamp</th><th>Nubosidad</th><th>Fenomenos</th></tr>";
+        for (let i = 1; i <= d; i++)
+          for (let hr of ["07:00", "13:00", "19:00"])
+            n += `<tr><td>${pad(i)}/${pad(mes.value)}/${anio.value} ${hr}</td><td><input></td><td><input></td></tr>`;
+        nf.innerHTML = n;
+        nav();
+      }
+      function nav() {
+        document.querySelectorAll("input").forEach(
+          (e, i, a) =>
+            (e.onkeydown = (x) => {
+              if (x.key === "Enter") {
+                x.preventDefault();
+                if (a[i + 1]) a[i + 1].focus();
+              }
+            }),
+        );
+      }
+      function dl(t, n) {
+        let b = new Blob([t], { type: "text/csv" });
+        let a = document.createElement("a");
+        a.href = URL.createObjectURL(b);
+        a.download = n;
+        a.click();
+      }
+      function exp07() {
+        let c = "timestamp,tmin,precipitacion,recorrido";
+        [...diario.rows].slice(1).forEach((r) => {
+          let v = r.querySelectorAll("input");
+          c += `${r.cells[0].textContent}/${pad(mes.value)}/${anio.value} 07:00,${v[0].value},${v[2].value},${v[3].value}`;
+        });
+        dl(c, "observacion_07.csv");
+      }
+      function exp19() {
+        let c = "timestamp,tmax";
+        [...diario.rows].slice(1).forEach((r) => {
+          let v = r.querySelectorAll("input");
+          c += `${r.cells[0].textContent}/${pad(mes.value)}/${anio.value} 19:00,${v[1].value}`;
+        });
+        dl(c, "observacion_19.csv");
+      }
+      function expTH() {
+        let c = "timestamp,secos,humedos,termografo,higrografo";
+        [...th.rows].slice(1).forEach((r) => {
+          let v = r.querySelectorAll("input");
+          c += `${r.cells[0].textContent},${v[0].value},${v[1].value},${v[2].value},${v[3].value}`;
+        });
+        dl(c, "temp_humedad.csv");
+      }
+      function expNF() {
+        let c = "timestamp,nubosidad,fenomenos";
+        [...nf.rows].slice(1).forEach((r) => {
+          let v = r.querySelectorAll("input");
+          c += `${r.cells[0].textContent},${v[0].value},${v[1].value}`;
+        });
+        dl(c, "nubosidad_fenomenos.csv");
+      }
+      crear();
+    </script>
+  </body>
+</html>
