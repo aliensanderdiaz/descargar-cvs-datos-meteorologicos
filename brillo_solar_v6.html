@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Brillo Solar V6</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f6f9;
+        margin: 20px;
+      }
+      .controles {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+      }
+      .info {
+        font-weight: bold;
+      }
+      .ok {
+        color: #2e7d32;
+      }
+      .errorTxt {
+        color: #c62828;
+      }
+      button {
+        padding: 10px 14px;
+        border: none;
+        background: #1976d2;
+        color: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .sec {
+        background: #757575;
+      }
+      .table-wrap {
+        overflow: auto;
+        background: #fff;
+        border: 1px solid #ccc;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 1px;
+        text-align: center;
+      }
+      th {
+        background: #1976d2;
+        color: #fff;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+      }
+      th:first-child,
+      td:first-child {
+        position: sticky;
+        left: 0;
+        background: #1976d2;
+        color: #fff;
+        z-index: 2;
+        min-width: 70px;
+      }
+      input {
+        width: 40px;
+        border: none;
+        text-align: center;
+        padding: 5px;
+      }
+      .fila-activa td {
+        background: #fff8c4 !important;
+        color: black;
+      }
+      .columna-activa {
+        background: #fff8c4 !important;
+        color: black;
+      }
+      .celda-activa {
+        background: #ffd54f !important;
+        color: black;
+      }
+      .total-dia {
+        font-weight: bold;
+        background: #e8f5e9;
+        color: #1b5e20;
+      }
+      .sin-dato {
+        background: #ffcdd2 !important;
+      }
+      .error {
+        background: #ff8a80 !important;
+      }
+      #filaTotales td {
+        border-top: 3px solid #1976d2;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Heliógrafo - Brillo Solar V6</h2>
+    <div class="controles">
+      <label
+        >Mes <input id="mes" type="number" min="1" max="12" value="8" /></label
+      ><label>Año <input id="anio" type="number" value="2026" /></label
+      ><button onclick="nuevaTabla()">Nueva Tabla</button
+      ><button class="sec" onclick="limpiarGuardado()">Borrar Guardado</button
+      ><button onclick="descargarCSV()">Descargar CSV</button
+      ><span id="estado" class="info ok"></span>
+    </div>
+    <div class="table-wrap"><table id="tabla"></table></div>
+    <script>
+      const HORAS = [
+        "05:00",
+        "06:00",
+        "07:00",
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00",
+        "18:00",
+      ];
+      const STORAGE = "brilloSolarV6";
+      const pad = (n) => String(n).padStart(2, "0");
+      const diasMes = (a, m) => new Date(a, m, 0).getDate();
+      function key() {
+        return STORAGE + "_" + mes.value + "_" + anio.value;
+      }
+      function crearTabla() {
+        const m = +mes.value,
+          a = +anio.value,
+          dias = diasMes(a, m);
+        let h = "<tr><th>Hora</th>";
+        for (let d = 1; d <= dias; d++)
+          h += `<th id="head-${d}">${pad(d)}</th>`;
+        h += "</tr>";
+        HORAS.forEach((hora, row) => {
+          h += `<tr><td id="hora-${row}">${hora}</td>`;
+          for (let d = 1; d <= dias; d++)
+            h += `<td><input value="0" data-row="${row}" data-col="${d}"></td>`;
+          h += "</tr>";
+        });
+        h += '<tr id="filaTotales"><td>TOTAL</td>';
+        for (let d = 1; d <= dias; d++)
+          h += `<td id="total-dia-${d}" class="total-dia">0.0</td>`;
+        h += "</tr>";
+        tabla.innerHTML = h;
+        configurar();
+        cargarGuardado();
+        recalcularTotales();
+        actualizarEstado();
+      }
+      function guardar() {
+        const datos = {};
+        document
+          .querySelectorAll("input[data-row]")
+          .forEach(
+            (i) => (datos[i.dataset.row + "-" + i.dataset.col] = i.value),
+          );
+        localStorage.setItem(key(), JSON.stringify(datos));
+      }
+      function cargarGuardado() {
+        const txt = localStorage.getItem(key());
+        if (!txt) return;
+        const datos = JSON.parse(txt);
+        document.querySelectorAll("input[data-row]").forEach((i) => {
+          const k = i.dataset.row + "-" + i.dataset.col;
+          if (datos[k] !== undefined) i.value = datos[k];
+        });
+        document.querySelectorAll("input[data-row]").forEach(validarInput);
+      }
+      function limpiarGuardado() {
+        localStorage.removeItem(key());
+        location.reload();
+      }
+      function nuevaTabla() {
+        const tiene = [...document.querySelectorAll("input[data-row]")].some(
+          (i) => i.value !== "" && i.value !== "0",
+        );
+        if (tiene && !confirm("Se perderán los datos visibles. ¿Continuar?"))
+          return;
+        crearTabla();
+      }
+      function recalcularTotales() {
+        let dias = document.querySelectorAll('[id^="total-dia-"]').length;
+        for (let d = 1; d <= dias; d++) {
+          let t = 0;
+          document.querySelectorAll(`input[data-col="${d}"]`).forEach((i) => {
+            let v = parseFloat(i.value);
+            if (!isNaN(v)) t += v;
+          });
+          document.getElementById("total-dia-" + d).textContent = t.toFixed(1);
+        }
+      }
+      function actualizarEstado() {
+        const err = document.querySelectorAll(".error").length;
+        const vac = document.querySelectorAll(".sin-dato").length;
+        estado.className = "info " + (err ? "errorTxt" : "ok");
+        estado.textContent =
+          (err ? "Errores: " + err : "Sin errores") +
+          " | Vacíos: " +
+          vac +
+          " | Guardado automático activo";
+      }
+      function validarInput(input) {
+        let v = input.value.trim();
+
+        // permitir coma decimal
+
+        v = v.replace(",", ".");
+
+        // permitir .5 => 0.5
+
+        if (v.startsWith(".")) {
+          v = "0" + v;
+        }
+
+        input.value = v;
+
+        const patron = /^(0(\.\d)?|1(\.0)?)$/;
+
+        input.classList.remove("error", "sin-dato");
+
+        if (v === "") {
+          input.classList.add("sin-dato");
+        } else if (!patron.test(v)) {
+          input.classList.add("error");
+        }
+      }
+      function limpiar() {
+        document
+          .querySelectorAll(".fila-activa")
+          .forEach((x) => x.classList.remove("fila-activa"));
+        document
+          .querySelectorAll(".columna-activa")
+          .forEach((x) => x.classList.remove("columna-activa"));
+        document
+          .querySelectorAll(".celda-activa")
+          .forEach((x) => x.classList.remove("celda-activa"));
+      }
+      function configurar() {
+        document.querySelectorAll("input[data-row]").forEach((input) => {
+          input.addEventListener("input", () => {
+            validarInput(input);
+            recalcularTotales();
+            actualizarEstado();
+            guardar();
+          });
+          input.addEventListener("focus", () => {
+            limpiar();
+            input.select();
+            const r = +input.dataset.row,
+              c = +input.dataset.col;
+            input.classList.add("celda-activa");
+            input.closest("tr").classList.add("fila-activa");
+            document
+              .querySelectorAll(`input[data-col="${c}"]`)
+              .forEach((x) => x.parentElement.classList.add("columna-activa"));
+            head = document.getElementById("head-" + c);
+            if (head) head.classList.add("columna-activa");
+          });
+          input.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            let r = +input.dataset.row,
+              c = +input.dataset.col;
+            let n = document.querySelector(
+              `input[data-row="${r + 1}"][data-col="${c}"]`,
+            );
+            if (!n)
+              n = document.querySelector(
+                `input[data-row="0"][data-col="${c + 1}"]`,
+              );
+            if (n) {
+              n.focus();
+              n.select();
+            }
+          });
+        });
+      }
+      function descargarCSV() {
+        if (document.querySelectorAll(".error").length) {
+          estado.textContent = "Corrija los campos rojos antes de exportar";
+          estado.className = "info errorTxt";
+          return;
+        }
+        const m = +mes.value,
+          a = +anio.value,
+          dias = diasMes(a, m);
+        let csv = "Dia;brillo\n";
+        for (let d = 1; d <= dias; d++) {
+          HORAS.forEach((h, r) => {
+            let v = document
+              .querySelector(`input[data-row="${r}"][data-col="${d}"]`)
+              .value.trim();
+            csv += `${pad(d)}/${pad(m)}/${a} ${h};${v}\n`;
+          });
+        }
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const aTag = document.createElement("a");
+        aTag.href = URL.createObjectURL(blob);
+        aTag.download = `brillo_v6_${a}_${pad(m)}.csv`;
+        aTag.click();
+      }
+      crearTabla();
+    </script>
+  </body>
+</html>

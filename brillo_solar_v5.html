@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Brillo Solar V5</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f6f9;
+        margin: 20px;
+      }
+
+      .controles {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+      }
+
+      .info {
+        font-weight: bold;
+      }
+
+      .ok {
+        color: #2e7d32;
+      }
+
+      .errorTxt {
+        color: #c62828;
+      }
+
+      button {
+        padding: 10px 14px;
+        border: none;
+        background: #1976d2;
+        color: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .table-wrap {
+        overflow: auto;
+        background: #fff;
+        border: 1px solid #ccc;
+      }
+
+      table {
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 2px;
+        text-align: center;
+      }
+
+      th {
+        background: #1976d2;
+        color: #fff;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+      }
+
+      th:first-child,
+      td:first-child {
+        position: sticky;
+        left: 0;
+        background: #1976d2;
+        color: #fff;
+        z-index: 2;
+        min-width: 70px;
+      }
+
+      input {
+        width: 60px;
+        border: none;
+        text-align: center;
+        padding: 5px;
+      }
+
+      .fila-activa td {
+        background: #fff8c4 !important;
+      }
+
+      .columna-activa {
+        background: #fff8c4 !important;
+      }
+
+      .celda-activa {
+        background: #ffd54f !important;
+      }
+
+      .total-dia {
+        font-weight: bold;
+        background: #e8f5e9;
+        color: #1b5e20;
+      }
+
+      .sin-dato {
+        background: #ffcdd2 !important;
+      }
+
+      .error {
+        background: #ff8a80 !important;
+      }
+
+      #filaTotales td {
+        border-top: 3px solid #1976d2;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>Heliógrafo - Brillo Solar V5</h2>
+    <div class="controles">
+      <label
+        >Mes <input id="mes" type="number" min="1" max="12" value="8" /></label
+      ><label>Año <input id="anio" type="number" value="2026" /></label
+      ><button onclick="crearTabla()">Generar Tabla</button
+      ><button onclick="descargarCSV()">Descargar CSV</button
+      ><span id="estado" class="info ok"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="tabla"></table>
+    </div>
+    <script>
+      const HORAS = [
+        "05:00",
+        "06:00",
+        "07:00",
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00",
+        "18:00",
+      ];
+      const pad = (n) => String(n).padStart(2, "0");
+      const diasMes = (a, m) => new Date(a, m, 0).getDate();
+      function crearTabla() {
+        const mes = +document.getElementById("mes").value,
+          anio = +document.getElementById("anio").value,
+          dias = diasMes(anio, mes);
+        let h = "<tr><th>Hora</th>";
+        for (let d = 1; d <= dias; d++)
+          h += `<th id="head-${d}">${pad(d)}</th>`;
+        h += "</tr>";
+        HORAS.forEach((hora, row) => {
+          h += `<tr><td id="hora-${row}">${hora}</td>`;
+          for (let d = 1; d <= dias; d++)
+            h += `<td><input value="0" data-row="${row}" data-col="${d}"></td>`;
+          h += "</tr>";
+        });
+        h += '<tr id="filaTotales"><td>TOTAL</td>';
+        for (let d = 1; d <= dias; d++)
+          h += `<td id="total-dia-${d}" class="total-dia">0.0</td>`;
+        h += "</tr>";
+        document.getElementById("tabla").innerHTML = h;
+        configurar();
+        recalcularTotales();
+        actualizarEstado();
+      }
+      function recalcularTotales() {
+        let dias = document.querySelectorAll('[id^="total-dia-"]').length;
+        for (let d = 1; d <= dias; d++) {
+          let total = 0;
+          document.querySelectorAll(`input[data-col="${d}"]`).forEach((i) => {
+            let v = parseFloat(i.value);
+            if (!isNaN(v)) total += v;
+          });
+          document.getElementById(`total-dia-${d}`).textContent =
+            total.toFixed(1);
+        }
+      }
+      function actualizarEstado() {
+        const errores = document.querySelectorAll(".error").length;
+        const vacios = document.querySelectorAll(".sin-dato").length;
+        const e = document.getElementById("estado");
+        if (errores) {
+          e.className = "info errorTxt";
+          e.textContent = "Errores: " + errores + " | Vacíos: " + vacios;
+        } else {
+          e.className = "info ok";
+          e.textContent = "Sin errores | Vacíos: " + vacios;
+        }
+      }
+      function limpiar() {
+        document
+          .querySelectorAll(".fila-activa")
+          .forEach((x) => x.classList.remove("fila-activa"));
+        document
+          .querySelectorAll(".columna-activa")
+          .forEach((x) => x.classList.remove("columna-activa"));
+        document
+          .querySelectorAll(".celda-activa")
+          .forEach((x) => x.classList.remove("celda-activa"));
+      }
+      function configurar() {
+        document.querySelectorAll("input[data-row]").forEach((input) => {
+          input.addEventListener("input", () => {
+            const v = input.value.trim();
+            const patron = /^(0(\.\d)?|1(\.0)?)$/;
+            input.classList.remove("sin-dato");
+            input.classList.remove("error");
+            if (v === "") {
+              input.classList.add("sin-dato");
+            } else if (!patron.test(v)) {
+              input.classList.add("error");
+            }
+            recalcularTotales();
+            actualizarEstado();
+          });
+          input.addEventListener("focus", () => {
+            limpiar();
+            input.select();
+            const row = +input.dataset.row,
+              col = +input.dataset.col;
+            input.classList.add("celda-activa");
+            input.closest("tr").classList.add("fila-activa");
+            document
+              .querySelectorAll(`input[data-col="${col}"]`)
+              .forEach((c) => c.parentElement.classList.add("columna-activa"));
+            document
+              .getElementById("head-" + col)
+              ?.classList.add("columna-activa");
+            document
+              .getElementById("hora-" + row)
+              ?.classList.add("columna-activa");
+          });
+          input.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            const row = +input.dataset.row,
+              col = +input.dataset.col;
+            let next = document.querySelector(
+              `input[data-row="${row + 1}"][data-col="${col}"]`,
+            );
+            if (!next)
+              next = document.querySelector(
+                `input[data-row="0"][data-col="${col + 1}"]`,
+              );
+            if (next) {
+              next.focus();
+              next.select();
+            }
+          });
+        });
+      }
+      function descargarCSV() {
+        if (document.querySelectorAll(".error").length) {
+          document.getElementById("estado").textContent =
+            "Corrija los campos en rojo antes de exportar";
+          document.getElementById("estado").className = "info errorTxt";
+          return;
+        }
+        const mes = +document.getElementById("mes").value,
+          anio = +document.getElementById("anio").value,
+          dias = diasMes(anio, mes);
+        let csv = "Dia;brillo\n";
+        for (let dia = 1; dia <= dias; dia++) {
+          HORAS.forEach((hora, row) => {
+            const v = document
+              .querySelector(`input[data-row="${row}"][data-col="${dia}"]`)
+              .value.trim();
+            csv += `${pad(dia)}/${pad(mes)}/${anio} ${hora};${v}\n`;
+          });
+        }
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `brillo_v5_${anio}_${pad(mes)}.csv`;
+        a.click();
+      }
+      crearTabla();
+    </script>
+  </body>
+</html>

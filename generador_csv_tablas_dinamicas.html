@@ -108,12 +108,12 @@
             nub: {
                 cols: ['nubosidad', 'fenomenos']
             },
-            pg: {
-                cols: ['pg']
-            },
-            brillo: {
-                cols: ['brillo']
-            }
+            // pg: {
+            //     cols: ['pg']
+            // },
+            // brillo: {
+            //     cols: ['brillo']
+            // }
 
         };
         const sel = document.getElementById('tipo');
@@ -177,16 +177,36 @@
 
             const t = sel.value, cfg = formatos[t], table = document.getElementById('tabla');
             const filas = filasFormato();
+
             let h = '<tr><th>Registro</th>';
             cfg.cols.forEach(c => h += '<th>' + c + '</th>');
             h += '</tr>';
             filas.forEach((f, r) => {
                 h += '<tr><td>' + f.label + '</td>';
-                cfg.cols.forEach((c, col) => {
-                    h += `<td><input class="cell" data-row="${r
-                        }" data-col="${col
-                        }"></td>`
-                });
+
+                // cfg.cols.forEach((c, col) => {
+                //     h += `<td>
+                //             <input class="cell" 
+                //                    data-row="${r}"
+                //                    data-col="${col}"></td>`
+                // });
+
+                cfg.cols.forEach((c,col)=>{
+
+    const valorInicial =
+        (t === 'pg' || t === 'brillo')
+        ? '0'
+        : '';
+
+    h += `
+    <td>
+        <input class="cell"
+               value="${valorInicial}"
+               data-row="${r}"
+               data-col="${col}">
+    </td>`;
+});
+
                 h += '</tr>';
             });
             table.innerHTML = h;

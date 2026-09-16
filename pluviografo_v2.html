@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pluviografo V2</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f6f9;
+        margin: 20px;
+      }
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+      }
+      .panel {
+        margin: 10px 0;
+        background: #fff;
+        padding: 10px;
+        border: 1px solid #ccc;
+      }
+      textarea {
+        width: 320px;
+        height: 120px;
+      }
+      button {
+        padding: 10px 14px;
+        border: none;
+        background: #1976d2;
+        color: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .table-wrap {
+        overflow: auto;
+        background: #fff;
+        border: 1px solid #ccc;
+      }
+      table {
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 2px;
+        text-align: center;
+      }
+      th {
+        background: #1976d2;
+        color: #fff;
+        position: sticky;
+        top: 0;
+      }
+      th:first-child,
+      td:first-child {
+        position: sticky;
+        left: 0;
+        background: #1976d2;
+        color: #fff;
+        min-width: 70px;
+      }
+      input {
+        width: 40px;
+        text-align: center;
+        border: none;
+        padding: 4px;
+      }
+      .fila-activa td {
+        background: #fff8c4 !important;
+        color: black;
+      }
+      .columna-activa {
+        background: #fff8c4 !important;
+        color: black;
+      }
+      .celda-activa {
+        background: #ffd54f !important;
+        color: black;
+      }
+      .total {
+        font-weight: bold;
+        background: #e8f5e9;
+      }
+      .diff-ok {
+        background: #c8e6c9;
+      }
+      .diff-mid {
+        background: #ffe082;
+      }
+      .diff-bad {
+        background: #ef9a9a;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Pluviógrafo V2</h2>
+    <div class="controls">
+      <label
+        >Mes <input id="mes" type="number" value="8" min="1" max="12"
+      /></label>
+      <label>Año <input id="anio" type="number" value="2026" /></label>
+      <button onclick="crearTabla()">Nueva Tabla</button>
+      <button onclick="descargarCSV()">Descargar CSV</button>
+    </div>
+    <div class="panel">
+      <b>Pegar serie diaria de Pluviómetro (1 valor por línea)</b><br />
+      <textarea id="serie"></textarea><br />
+      <button onclick="cargarPluviometro()">Cargar Pluviómetro</button>
+    </div>
+    <div class="table-wrap"><table id="tabla"></table></div>
+    <script>
+      const HORAS = [
+        "07:00",
+        "08:00",
+        "09:00",
+        "10:00",
+        "11:00",
+        "12:00",
+        "13:00",
+        "14:00",
+        "15:00",
+        "16:00",
+        "17:00",
+        "18:00",
+        "19:00",
+        "20:00",
+        "21:00",
+        "22:00",
+        "23:00",
+        "00:00",
+        "01:00",
+        "02:00",
+        "03:00",
+        "04:00",
+        "05:00",
+        "06:00",
+      ];
+      const pad = (n) => String(n).padStart(2, "0");
+      const diasMes = (a, m) => new Date(a, m, 0).getDate();
+      function crearTabla() {
+        const m = +document.getElementById("mes").value,
+          a = +document.getElementById("anio").value,
+          dias = diasMes(a, m);
+        let h = "<tr><th>Hora</th>";
+        for (let d = 1; d <= dias; d++)
+          h += `<th id="head-${d}">${pad(d)}</th>`;
+        h += "</tr>";
+        HORAS.forEach((hr, r) => {
+          h += `<tr><td id="hora-${r}">${hr}</td>`;
+          for (let d = 1; d <= dias; d++)
+            h += `<td><input value="0" data-row="${r}" data-col="${d}"></td>`;
+          h += "</tr>";
+        });
+        h += '<tr><td class="total">PG TOTAL</td>';
+        for (let d = 1; d <= dias; d++)
+          h += `<td id="pg-${d}" class="total">0.0</td>`;
+        h += "</tr>";
+        h += '<tr><td class="total">PLUVIÓMETRO</td>';
+        for (let d = 1; d <= dias; d++)
+          h += `<td><input id="pluv-${d}" value="0"></td>`;
+        h += "</tr>";
+        h += '<tr><td class="total">DIFERENCIA</td>';
+        for (let d = 1; d <= dias; d++)
+          h += `<td id="dif-${d}" class="total">0.0</td>`;
+        h += "</tr>";
+        document.getElementById("tabla").innerHTML = h;
+        configurar();
+        recalcular();
+      }
+      function cargarPluviometro() {
+        const vals = document
+          .getElementById("serie")
+          .value.split(/\r?\n/)
+          .map((v) => v.replace("\r", ""));
+        // .filter((x) => x.trim() !== "");
+
+        // vals.forEach((v, i) => {
+        //   const c = document.getElementById("pluv-" + (i + 1));
+        //   if (c) c.value = v;
+        // });
+
+        vals.forEach((v, i) => {
+          const c = document.getElementById("pluv-" + (i + 1));
+
+          if (c) {
+            c.value = v.trim();
+          }
+        });
+        recalcular();
+      }
+      function recalcular() {
+        const dias = document.querySelectorAll('[id^="pg-"]').length;
+        for (let d = 1; d <= dias; d++) {
+          let total = 0;
+          document.querySelectorAll(`input[data-col="${d}"]`).forEach((i) => {
+            let v = parseFloat(i.value);
+            if (!isNaN(v)) total += v;
+          });
+          document.getElementById("pg-" + d).textContent = total.toFixed(1);
+          let pl = parseFloat(document.getElementById("pluv-" + d).value) || 0;
+          let dif = total - pl;
+          const cel = document.getElementById("dif-" + d);
+          cel.textContent = dif.toFixed(1);
+          cel.className =
+            "total " +
+            (Math.abs(dif) <= 0.2
+              ? "diff-ok"
+              : Math.abs(dif) <= 1
+                ? "diff-mid"
+                : "diff-bad");
+        }
+      }
+      function limpiar() {
+        document
+          .querySelectorAll(".fila-activa")
+          .forEach((x) => x.classList.remove("fila-activa"));
+        document
+          .querySelectorAll(".columna-activa")
+          .forEach((x) => x.classList.remove("columna-activa"));
+        document
+          .querySelectorAll(".celda-activa")
+          .forEach((x) => x.classList.remove("celda-activa"));
+      }
+      function configurar() {
+        document.querySelectorAll("input[data-row]").forEach((inp) => {
+          inp.addEventListener("input", recalcular);
+          inp.addEventListener("focus", () => {
+            limpiar();
+            inp.select();
+            const r = +inp.dataset.row,
+              c = +inp.dataset.col;
+            inp.classList.add("celda-activa");
+            inp.closest("tr").classList.add("fila-activa");
+            document
+              .querySelectorAll(`input[data-col="${c}"]`)
+              .forEach((x) => x.parentElement.classList.add("columna-activa"));
+            const hd = document.getElementById("head-" + c);
+            if (hd) hd.classList.add("columna-activa");
+          });
+          inp.addEventListener("keydown", (e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            let r = +inp.dataset.row,
+              c = +inp.dataset.col;
+            let n = document.querySelector(
+              `input[data-row="${r + 1}"][data-col="${c}"]`,
+            );
+            if (!n)
+              n = document.querySelector(
+                `input[data-row="0"][data-col="${c + 1}"]`,
+              );
+            if (n) {
+              n.focus();
+              n.select();
+            }
+          });
+        });
+        document
+          .querySelectorAll('[id^="pluv-"]')
+          .forEach((i) => i.addEventListener("input", recalcular));
+      }
+      function descargarCSV() {
+        const m = +document.getElementById("mes").value,
+          a = +document.getElementById("anio").value,
+          dias = diasMes(a, m);
+        let csv = "timestamp;pg\n";
+        for (let d = 1; d <= dias; d++) {
+          HORAS.forEach((h, r) => {
+            const v =
+              document.querySelector(`input[data-row="${r}"][data-col="${d}"]`)
+                .value || 0;
+            let fecha;
+            if (h >= "07:00") {
+              fecha = `${pad(d)}/${pad(m)}/${a} ${h}`;
+            } else {
+              let nd = d === dias ? 1 : d + 1;
+              let nm = d === dias ? (m === 12 ? 1 : m + 1) : m;
+              let ny = d === dias && m === 12 ? a + 1 : a;
+              fecha = `${pad(nd)}/${pad(nm)}/${ny} ${h}`;
+            }
+            csv += fecha + ";" + v + "\n";
+          });
+        }
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const aTag = document.createElement("a");
+        aTag.href = URL.createObjectURL(blob);
+        aTag.download = "pluviografo_v2.csv";
+        aTag.click();
+      }
+      crearTabla();
+    </script>
+  </body>
+</html>

@@ -1,246 +1,130 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador CSV Meteorológico</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f5f7fa;
-            padding: 20px;
-        }
+<title>Herramientas Meteorológicas</title>
 
-        .container {
-            max-width: 1200px;
-            margin: auto;
-        }
+<style>
 
-        h1 {
-            text-align: center;
-        }
+body{
+    font-family:Segoe UI, Arial, sans-serif;
+    background:#f4f6f9;
+    margin:40px;
+    color:#333;
+}
 
-        .config {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
+h1{
+    margin-bottom:5px;
+}
 
-        input,
-        select {
-            padding: 8px;
-            font-size: 14px;
-        }
+.subtitulo{
+    color:#666;
+    margin-bottom:30px;
+}
 
-        .columnas {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
+.grupo{
+    background:white;
+    border-left:5px solid #1976d2;
+    padding:15px 20px;
+    margin-bottom:20px;
+    box-shadow:0 1px 4px rgba(0,0,0,.1);
+}
 
-        .columna {
-            display: flex;
-            flex-direction: column;
-        }
+.grupo h2{
+    margin-top:0;
+    font-size:18px;
+    color:#1976d2;
+}
 
-        label {
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
+ul{
+    list-style:none;
+    padding-left:0;
+    margin:0;
+}
 
-        textarea {
-            height: 500px;
-            resize: vertical;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 14px;
-        }
+li{
+    margin:8px 0;
+}
 
-        .botones {
-            text-align: center;
-            margin-top: 20px;
-        }
+a{
+    text-decoration:none;
+    color:#333;
+    padding:5px 0;
+    display:inline-block;
+}
 
-        button {
-            padding: 12px 25px;
-            font-size: 16px;
-            cursor: pointer;
-            background: #1a73e8;
-            color: white;
-            border: none;
-            border-radius: 6px;
-        }
+a:hover{
+    color:#1976d2;
+    text-decoration:underline;
+}
 
-        button:hover {
-            background: #1666c1;
-        }
+</style>
 
-        .info {
-            text-align: center;
-            margin-top: 10px;
-            color: #666;
-        }
-    </style>
 </head>
-
 <body>
 
-    <div class="container">
+<h1>Herramientas Meteorológicas</h1>
 
-        <h1>Generador CSV</h1>
+<div class="subtitulo">
+Seleccione una herramienta:
+</div>
 
-        <div class="config">
-            <div>
-                <label>Mes</label><br>
-                <select id="mes">
-                    <option value="1">Enero</option>
-                    <option value="2">Febrero</option>
-                    <option value="3">Marzo</option>
-                    <option value="4">Abril</option>
-                    <option value="5">Mayo</option>
-                    <option value="6">Junio</option>
-                    <option value="7" selected>Julio</option>
-                    <option value="8">Agosto</option>
-                    <option value="9">Septiembre</option>
-                    <option value="10">Octubre</option>
-                    <option value="11">Noviembre</option>
-                    <option value="12">Diciembre</option>
-                </select>
-            </div>
+<div class="grupo">
 
-            <div>
-                <label>Año</label><br>
-                <input type="number" id="anio" value="2026">
-            </div>
+    <h2>🌞 Heliógrafo / Brillo Solar</h2>
 
-            <div>
-                <label>Hora</label><br>
-                <input type="text" id="hora" value="07:00">
-            </div>
-        </div>
+    <ul>
+        <!-- <li><a target="_blank" href="brillo-solar.html">Brillo Solar</a></li>
+        <li><a target="_blank" href="brillo_solar_v2.html">Brillo Solar V2</a></li>
+        <li><a target="_blank" href="brillo_solar_v3.html">Brillo Solar V3</a></li>
+        <li><a target="_blank" href="brillo_solar_v4.html">Brillo Solar V4</a></li>
+        <li><a target="_blank" href="brillo_solar_v5.html">Brillo Solar V5</a></li> -->
+        <li><a target="_blank" href="brillo_solar_v6.html">Brillo Solar</a></li>
+    </ul>
 
-        <div class="columnas">
+</div>
 
-            <div class="columna">
-                <label>Mínima</label>
-                <textarea id="minima" placeholder="23.5
-23.6
-23.1"></textarea>
-            </div>
+<div class="grupo">
 
-            <div class="columna">
-                <label>Pluviómetro</label>
-                <textarea id="pluviometro" placeholder="0
-0.7
-0"></textarea>
-            </div>
+    <h2>🌧️ Pluviógrafo</h2>
 
-            <div class="columna">
-                <label>Recorrido</label>
-                <textarea id="recorrido" placeholder="568852
-568957
-569095"></textarea>
-            </div>
+    <ul>
+        <!-- <li><a target="_blank" href="pluviografo.html">Pluviógrafo</a></li> -->
+        <li><a target="_blank" href="pluviografo_v2.html">Pluviógrafo</a></li>
+        
+        </ul>
 
-        </div>
+</div>
 
-        <div class="botones">
-            <button onclick="generarCSV()">
-                Descargar CSV
-            </button>
+<div class="grupo">
 
-            <div class="info" id="info"></div>
-        </div>
+    <h2>📊 Generadores y Utilidades</h2>
 
-    </div>
+    <ul>
+        <li>
+            <a target="_blank" href="generador_csv_tablas_dinamicas.html">
+                Termometros, Pluviometro, Fenomenos, Evaporacion, Recorrido, Nubosidad
+            </a>
+        </li>
 
-    <script>
+        <!-- <li><a target="_blank" href="todos.html">Todos</a></li> -->
+        <!-- <li><a target="_blank" href="index-2.html">Versión inicial</a></li> -->
+    </ul>
 
-        function pad(n) {
-            return String(n).padStart(2, '0');
-        }
+</div>
 
-        function generarCSV() {
+<!-- <div class="grupo">
 
-            const mes = Number(document.getElementById('mes').value);
-            const anio = Number(document.getElementById('anio').value);
-            const hora = document.getElementById('hora').value;
+    <h2>🧪 Versiones de Desarrollo</h2>
 
-            const minimas = document.getElementById('minima')
-                .value.trim()
-                .split('\n')
-                .filter(x => x.trim() !== '');
+    <ul>
+        <li><a target="_blank" href="version-copilot.html">Versión Copilot</a></li>
+        <li><a target="_blank" href="version-tabla.html">Versión Tabla</a></li>
+    </ul>
 
-            const pluviometro = document.getElementById('pluviometro')
-                .value.trim()
-                .split('\n')
-                .filter(x => x.trim() !== '');
-
-            const recorrido = document.getElementById('recorrido')
-                .value.trim()
-                .split('\n')
-                .filter(x => x.trim() !== '');
-
-            const total = Math.max(
-                minimas.length,
-                pluviometro.length,
-                recorrido.length
-            );
-
-            if (
-                minimas.length !== total ||
-                pluviometro.length !== total ||
-                recorrido.length !== total
-            ) {
-                alert('Las tres columnas deben tener la misma cantidad de líneas.');
-                return;
-            }
-
-            let csv = "timestamp;minima;pluviometro;recorrido\n";
-
-            for (let i = 0; i < total; i++) {
-
-                const fecha =
-                    pad(i + 1) + '/' +
-                    pad(mes) + '/' +
-                    anio + ' ' +
-                    hora;
-
-                csv +=
-                    fecha + ';' +
-                    minimas[i] + ';' +
-                    pluviometro[i] + ';' +
-                    recorrido[i] + '\n';
-            }
-
-            const blob = new Blob(
-                [csv],
-                { type: 'text/csv;charset=utf-8;' }
-            );
-
-            const url = URL.createObjectURL(blob);
-
-            const a = document.createElement('a');
-
-            a.href = url;
-            a.download = `datos_${anio}_${pad(mes)}.csv`;
-
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            URL.revokeObjectURL(url);
-
-            document.getElementById('info').innerHTML =
-                `${total} registros exportados`;
-        }
-
-    </script>
+</div> -->
 
 </body>
-
 </html>

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heliógrafo - Brillo Solar</title>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    background:#f4f6f9;
+    margin:20px;
+}
+
+h2{
+    margin-bottom:15px;
+}
+
+.controles{
+    display:flex;
+    gap:10px;
+    margin-bottom:15px;
+    flex-wrap:wrap;
+}
+
+label{
+    font-weight:bold;
+}
+
+button{
+    padding:10px 15px;
+    border:none;
+    background:#1976d2;
+    color:white;
+    cursor:pointer;
+    border-radius:4px;
+}
+
+button:hover{
+    background:#0d5bb8;
+}
+
+.contenedor-tabla{
+    overflow:auto;
+    background:white;
+    border:1px solid #ccc;
+}
+
+table{
+    border-collapse:collapse;
+}
+
+th,td{
+    border:1px solid #ddd;
+    text-align:center;
+    padding:2px;
+}
+
+th{
+    background:#1976d2;
+    color:white;
+    position:sticky;
+    top:0;
+    z-index:2;
+}
+
+th:first-child,
+td:first-child{
+    position:sticky;
+    left:0;
+    background:#1976d2;
+    color:white;
+    z-index:1;
+    min-width:70px;
+}
+
+input{
+    width:60px;
+    border:none;
+    text-align:center;
+    padding:5px;
+}
+
+input:focus{
+    background:#fff4b0;
+    outline:2px solid #1976d2;
+}
+
+.fila-activa td{
+    background:#fff8c4 !important;
+}
+
+.columna-activa{
+    background:#fff8c4 !important;
+}
+
+.celda-activa{
+    background:#ffd54f !important;
+}
+</style>
+</head>
+<body>
+
+<h2>Heliógrafo - Brillo Solar</h2>
+
+<div class="controles">
+
+    <label>
+        Mes
+        <input
+            id="mes"
+            type="number"
+            min="1"
+            max="12"
+            value="8">
+    </label>
+
+    <label>
+        Año
+        <input
+            id="anio"
+            type="number"
+            value="2026">
+    </label>
+
+    <button onclick="crearTabla()">
+        Generar Tabla
+    </button>
+
+    <button onclick="descargarCSV()">
+        Descargar CSV
+    </button>
+
+</div>
+
+<div class="contenedor-tabla">
+    <table id="tabla"></table>
+</div>
+
+<script>
+
+const HORAS = [
+'05:00',
+'06:00',
+'07:00',
+'08:00',
+'09:00',
+'10:00',
+'11:00',
+'12:00',
+'13:00',
+'14:00',
+'15:00',
+'16:00',
+'17:00',
+'18:00'
+];
+
+function pad(n){
+    return String(n).padStart(2,'0');
+}
+
+function diasMes(anio, mes){
+    return new Date(anio, mes, 0).getDate();
+}
+
+function crearTabla(){
+
+    const mes =
+        Number(document.getElementById('mes').value);
+
+    const anio =
+        Number(document.getElementById('anio').value);
+
+    const dias =
+        diasMes(anio, mes);
+
+    let html =
+        '<tr><th>Hora</th>';
+
+    for(let dia=1; dia<=dias; dia++){
+
+        html += `<th>${pad(dia)}</th>`;
+    }
+
+    html += '</tr>';
+
+    HORAS.forEach((hora,row)=>{
+
+        html += `<tr>`;
+
+        html += `<td>${hora}</td>`;
+
+        for(let dia=1; dia<=dias; dia++){
+
+            html += `
+            <td>
+                <input
+                    value="0"
+                    data-row="${row}"
+                    data-col="${dia}">
+            </td>`;
+        }
+
+        html += '</tr>';
+
+    });
+
+    document.getElementById('tabla').innerHTML =
+        html;
+
+    configurarEnter();
+    configurarResaltado();
+
+}
+
+function configurarEnter(){
+
+    document
+        .querySelectorAll('input[data-row]')
+        .forEach(input=>{
+
+            input.addEventListener('focus',()=>{
+
+                input.select();
+
+            });
+
+            input.addEventListener('keydown',(e)=>{
+
+                if(e.key !== 'Enter'){
+                    return;
+                }
+
+                e.preventDefault();
+
+                const row =
+                    Number(input.dataset.row);
+
+                const col =
+                    Number(input.dataset.col);
+
+                // bajar dentro del mismo día
+
+                let siguiente =
+                    document.querySelector(
+                        `input[data-row="${row+1}"][data-col="${col}"]`
+                    );
+
+                // pasar al siguiente día
+
+                if(!siguiente){
+
+                    siguiente =
+                        document.querySelector(
+                            `input[data-row="0"][data-col="${col+1}"]`
+                        );
+
+                }
+
+                if(siguiente){
+
+                    siguiente.focus();
+                    siguiente.select();
+
+                }
+
+            });
+
+        });
+
+}
+
+function configurarResaltado(){
+
+    document
+        .querySelectorAll('input[data-row]')
+        .forEach(input=>{
+
+            input.addEventListener('focus',()=>{
+
+                document
+                    .querySelectorAll('.fila-activa')
+                    .forEach(x=>x.classList.remove('fila-activa'));
+
+                document
+                    .querySelectorAll('.columna-activa')
+                    .forEach(x=>x.classList.remove('columna-activa'));
+
+                document
+                    .querySelectorAll('.celda-activa')
+                    .forEach(x=>x.classList.remove('celda-activa'));
+
+                const row =
+                    Number(input.dataset.row);
+
+                const col =
+                    Number(input.dataset.col);
+
+                // fila completa
+
+                const tr =
+                    input.closest('tr');
+
+                tr.classList.add('fila-activa');
+
+                // columna completa
+
+                document
+                    .querySelectorAll(
+                        `[data-col="${col}"]`
+                    )
+                    .forEach(c=>{
+
+                        c.parentElement
+                         .classList
+                         .add('columna-activa');
+
+                    });
+
+                // celda actual
+
+                input.classList.add(
+                    'celda-activa'
+                );
+
+            });
+
+        });
+
+}
+
+function descargarCSV(){
+
+    const mes =
+        Number(document.getElementById('mes').value);
+
+    const anio =
+        Number(document.getElementById('anio').value);
+
+    const dias =
+        diasMes(anio, mes);
+
+    let csv = "Dia;brillo\r\n";
+
+    for(let dia=1; dia<=dias; dia++){
+
+        HORAS.forEach((hora,row)=>{
+
+            const input =
+                document.querySelector(
+                    `input[data-row="${row}"][data-col="${dia}"]`
+                );
+
+            const valor =
+                input.value.trim() || '0';
+
+            csv +=
+                `${pad(dia)}/${pad(mes)}/${anio} ${hora};${valor}\r\n`;
+
+        });
+
+    }
+
+    const blob =
+        new Blob(
+            [csv],
+            {
+                type:'text/csv;charset=utf-8'
+            }
+        );
+
+    const enlace =
+        document.createElement('a');
+
+    enlace.href =
+        URL.createObjectURL(blob);
+
+    enlace.download =
+        `brillo_${anio}_${pad(mes)}.csv`;
+
+    enlace.click();
+
+}
+
+crearTabla();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PG - Pluviógrafo</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f4f6f9;
+        }
+
+        h2 {
+            margin-bottom: 15px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .table-container {
+            overflow: auto;
+            background: white;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            text-align: center;
+            padding: 2px;
+        }
+
+        th {
+            background: #1976d2;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+
+        th:first-child,
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background: #1976d2;
+            color: white;
+            min-width: 70px;
+        }
+
+        input {
+            width: 60px;
+            text-align: center;
+            border: none;
+            padding: 5px;
+        }
+
+        input:focus {
+            background: #fff8c4;
+            outline: 1px solid #1976d2;
+        }
+
+        button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            background: #1976d2;
+            color: white;
+        }
+
+        .fila-activa td {
+            background: #fff8c4 !important;
+        }
+
+        .columna-activa {
+            background: #fff8c4 !important;
+        }
+
+        .celda-activa {
+            background: #ffd54f !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>PG - Pluviógrafo</h2>
+
+    <div class="controls">
+
+        <label>
+            Mes:
+            <input id="mes" type="number" min="1" max="12" value="7">
+        </label>
+
+        <label>
+            Año:
+            <input id="anio" type="number" value="2026">
+        </label>
+
+        <button onclick="crearTabla()">
+            Generar tabla
+        </button>
+
+        <button onclick="descargarCSV()">
+            Descargar CSV
+        </button>
+
+    </div>
+
+    <div class="table-container">
+        <table id="tabla"></table>
+    </div>
+
+    <script>
+
+        const HORAS = [
+            '07:00', '08:00', '09:00', '10:00',
+            '11:00', '12:00', '13:00', '14:00',
+            '15:00', '16:00', '17:00', '18:00',
+            '19:00', '20:00', '21:00', '22:00',
+            '23:00', '00:00', '01:00', '02:00',
+            '03:00', '04:00', '05:00', '06:00'
+        ];
+
+        function pad(n) {
+            return String(n).padStart(2, '0');
+        }
+
+        function diasMes(anio, mes) {
+            return new Date(anio, mes, 0).getDate();
+        }
+
+        function crearTabla() {
+
+            const mes = Number(document.getElementById("mes").value);
+            const anio = Number(document.getElementById("anio").value);
+
+            const dias = diasMes(anio, mes);
+
+            let html = "<tr><th>Hora</th>";
+
+            for (let d = 1; d <= dias; d++) {
+                html += `<th>${pad(d)}</th>`;
+            }
+
+            html += "</tr>";
+
+            HORAS.forEach((hora, row) => {
+
+                html += `<tr>`;
+                html += `<td>${hora}</td>`;
+
+                for (let d = 1; d <= dias; d++) {
+
+                    html += `
+            <td>
+                <input
+                    value="0"
+                    data-row="${row}"
+                    data-col="${d}">
+            </td>`;
+                }
+
+                html += "</tr>";
+            });
+
+            document.getElementById("tabla").innerHTML = html;
+
+            configurarEnter();
+            configurarResaltado();
+        }
+
+        function configurarEnter() {
+
+            document.querySelectorAll("input[data-row]").forEach(input => {
+
+                input.addEventListener("focus", () => {
+                    input.select();
+                });
+
+                input.addEventListener("keydown", (e) => {
+
+                    if (e.key !== "Enter") {
+                        return;
+                    }
+
+                    e.preventDefault();
+
+                    const row =
+                        Number(input.dataset.row);
+
+                    const col =
+                        Number(input.dataset.col);
+
+                    // bajar dentro del mismo día
+
+                    let siguiente =
+                        document.querySelector(
+                            `input[data-row="${row + 1}"][data-col="${col}"]`
+                        );
+
+                    // si llegó al final del día,
+                    // pasa al inicio del siguiente día
+
+                    if (!siguiente) {
+
+                        siguiente =
+                            document.querySelector(
+                                `input[data-row="0"][data-col="${col + 1}"]`
+                            );
+                    }
+
+                    if (siguiente) {
+
+                        siguiente.focus();
+                        siguiente.select();
+
+                    }
+
+                });
+
+            });
+
+        }
+
+        function configurarResaltado() {
+
+            document
+                .querySelectorAll('input[data-row]')
+                .forEach(input => {
+
+                    input.addEventListener('focus', () => {
+
+                        document
+                            .querySelectorAll('.fila-activa')
+                            .forEach(x => x.classList.remove('fila-activa'));
+
+                        document
+                            .querySelectorAll('.columna-activa')
+                            .forEach(x => x.classList.remove('columna-activa'));
+
+                        document
+                            .querySelectorAll('.celda-activa')
+                            .forEach(x => x.classList.remove('celda-activa'));
+
+                        const row =
+                            Number(input.dataset.row);
+
+                        const col =
+                            Number(input.dataset.col);
+
+                        // fila completa
+
+                        const tr =
+                            input.closest('tr');
+
+                        tr.classList.add('fila-activa');
+
+                        // columna completa
+
+                        document
+                            .querySelectorAll(
+                                `[data-col="${col}"]`
+                            )
+                            .forEach(c => {
+
+                                c.parentElement
+                                    .classList
+                                    .add('columna-activa');
+
+                            });
+
+                        // celda actual
+
+                        input.classList.add(
+                            'celda-activa'
+                        );
+
+                    });
+
+                });
+
+        }
+
+        function descargarCSV() {
+
+            const mes =
+                Number(document.getElementById("mes").value);
+
+            const anio =
+                Number(document.getElementById("anio").value);
+
+            const dias =
+                diasMes(anio, mes);
+
+            let csv = "timestamp;pg\r\n";
+
+            for (let d = 1; d <= dias; d++) {
+
+                HORAS.forEach((hora, row) => {
+
+                    const celda =
+                        document.querySelector(
+                            `input[data-row="${row}"][data-col="${d}"]`
+                        );
+
+                    // let valor = celda.value || "0";
+                    let valor = celda.value || '';
+
+                    let fecha;
+
+                    if (hora >= "07:00") {
+
+                        fecha =
+                            `${pad(d)}/${pad(mes)}/${anio} ${hora}`;
+
+                    } else {
+
+                        let siguienteMes = mes + 1;
+                        let siguienteAnio = anio;
+
+                        if (siguienteMes > 12) {
+                            siguienteMes = 1;
+                            siguienteAnio++;
+                        }
+
+                        const diaDestino =
+                            d === dias ? 1 : d + 1;
+
+                        const mesDestino =
+                            d === dias
+                                ? siguienteMes
+                                : mes;
+
+                        const anioDestino =
+                            d === dias
+                                ? siguienteAnio
+                                : anio;
+
+                        fecha =
+                            `${pad(diaDestino)}/${pad(mesDestino)}/${anioDestino} ${hora}`;
+                    }
+
+                    csv += `${fecha};${valor}\r\n`;
+
+                });
+
+            }
+
+            const blob =
+                new Blob(
+                    [csv],
+                    {
+                        type: 'text/csv;charset=utf-8'
+                    }
+                );
+
+            const a =
+                document.createElement("a");
+
+            a.href =
+                URL.createObjectURL(blob);
+
+            a.download =
+                `pg_${anio}_${pad(mes)}.csv`;
+
+            a.click();
+        }
+
+        crearTabla();
+
+    </script>
+
+</body>
+
+</html>
